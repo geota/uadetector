@@ -47,8 +47,8 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	 * Internal data store which will be used to load previously saved <em>UAS data</em> from a cache file.
 	 */
 	private static class CacheFileDataStore extends AbstractDataStore {
-		protected CacheFileDataStore(final Data data, final DataReader reader, final URL dataUrl, final Charset charset) {
-			super(data, reader, dataUrl, dataUrl, charset);
+		protected CacheFileDataStore(final Data data, final DataReader reader, final URL dataUrl, final URL dataDefUrl, final Charset charset) {
+			super(data, reader, dataUrl, dataUrl, dataDefUrl, charset);
 		}
 	}
 
@@ -143,7 +143,7 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	@Nonnull
 	@Deprecated
 	public static CachingXmlDataStore createCachingXmlDataStore(@Nonnull final File cacheFile, @Nonnull final DataStore fallback) {
-		return createCachingXmlDataStore(cacheFile, UrlUtil.build(DEFAULT_DATA_URL), UrlUtil.build(DEFAULT_VERSION_URL), DEFAULT_CHARSET,
+		return createCachingXmlDataStore(cacheFile, UrlUtil.build(DEFAULT_DATA_URL), UrlUtil.build(DEFAULT_VERSION_URL), UrlUtil.build(DEFAULT_DATA_DEF_URL), DEFAULT_CHARSET,
 				fallback);
 	}
 
@@ -172,7 +172,7 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	 */
 	@Nonnull
 	public static CachingXmlDataStore createCachingXmlDataStore(@Nonnull final File cacheFile, @Nonnull final URL dataUrl,
-			@Nonnull final URL versionUrl, @Nonnull final Charset charset, @Nonnull final DataStore fallback) {
+			@Nonnull final URL versionUrl, @Nonnull final URL dataDefUrl, @Nonnull final Charset charset, @Nonnull final DataStore fallback) {
 		Check.notNull(cacheFile, "cacheFile");
 		Check.notNull(charset, "charset");
 		Check.notNull(dataUrl, "dataUrl");
@@ -180,8 +180,8 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 		Check.notNull(versionUrl, "versionUrl");
 
 		final DataReader reader = new XmlDataReader();
-		final DataStore fallbackDataStore = readCacheFileAsFallback(reader, cacheFile, charset, fallback);
-		return new CachingXmlDataStore(reader, dataUrl, versionUrl, charset, cacheFile, fallbackDataStore);
+		final DataStore fallbackDataStore = readCacheFileAsFallback(reader, cacheFile, dataDefUrl, charset, fallback);
+		return new CachingXmlDataStore(reader, dataUrl, versionUrl, dataDefUrl, charset, cacheFile, fallbackDataStore);
 	}
 
 	/**
@@ -206,8 +206,8 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	 */
 	@Nonnull
 	public static CachingXmlDataStore createCachingXmlDataStore(@Nonnull final URL dataUrl, @Nonnull final URL versionUrl,
-			@Nonnull final Charset charset, @Nonnull final DataStore fallback) {
-		return createCachingXmlDataStore(findOrCreateCacheFile(), dataUrl, versionUrl, charset, fallback);
+			@Nonnull final URL dataDefUrl, @Nonnull final Charset charset, @Nonnull final DataStore fallback) {
+		return createCachingXmlDataStore(findOrCreateCacheFile(), dataUrl, versionUrl, dataDefUrl, charset, fallback);
 	}
 
 	/**
@@ -284,12 +284,12 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	 * @return a fallback data store
 	 */
 	private static DataStore readCacheFileAsFallback(@Nonnull final DataReader reader, @Nonnull final File cacheFile,
-			@Nonnull final Charset charset, @Nonnull final DataStore fallback) {
+			@Nonnull final URL dataDefUrl, @Nonnull final Charset charset, @Nonnull final DataStore fallback) {
 		DataStore fallbackDataStore;
 		if (!isEmpty(cacheFile, charset)) {
 			final URL cacheFileUrl = UrlUtil.toUrl(cacheFile);
 			try {
-				fallbackDataStore = new CacheFileDataStore(reader.read(cacheFileUrl, charset), reader, cacheFileUrl, charset);
+				fallbackDataStore = new CacheFileDataStore(reader.read(cacheFileUrl, dataDefUrl, charset), reader, cacheFileUrl, dataDefUrl, charset);
 				LOG.debug(MSG_CACHE_FILE_IS_FILLED);
 			} catch (final RuntimeException e) {
 				fallbackDataStore = fallback;
@@ -321,8 +321,8 @@ public final class CachingXmlDataStore extends AbstractRefreshableDataStore {
 	 *             if one of the given arguments is {@code null}
 	 */
 	private CachingXmlDataStore(@Nonnull final DataReader reader, @Nonnull final URL dataUrl, @Nonnull final URL versionUrl,
-			@Nonnull final Charset charset, @Nonnull final File cacheFile, @Nonnull final DataStore fallback) {
-		super(reader, dataUrl, versionUrl, charset, fallback);
+			@Nonnull final URL dataDefUrl, @Nonnull final Charset charset, @Nonnull final File cacheFile, @Nonnull final DataStore fallback) {
+		super(reader, dataUrl, versionUrl, dataDefUrl, charset, fallback);
 		setUpdateOperation(new UpdateOperationWithCacheFileTask(this, cacheFile));
 	}
 
